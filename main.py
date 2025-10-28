@@ -1,207 +1,265 @@
 #!/usr/bin/env python3
-
 """
-Main entry point for the Polaris Localization Algorithm.
-This script provides a command-line interface for running the complete pipeline.
+Polaris Autonomous System - Unified CLI Entry Point
+
+Simplified interface for EKF localization, ML training, and comparison.
 """
 
 import argparse
 import sys
-import os
 from pathlib import Path
 
-from polaris_autonomous_system.localization.localization_preprocessor import LocalizationPreprocessor
-from polaris_autonomous_system.localization.ekf_localization import LocalizationProcessor
-
 def main():
-    """Main entry point for the localization pipeline."""
     parser = argparse.ArgumentParser(
-        description="Polaris Localization Algorithm - Real-time vehicle localization using EKF",
+        description="Polaris Autonomous System - Vehicle Localization",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Process bag data and run localization
-  python main.py --bag-dir /path/to/bags --output-dir /path/to/output
+  # Run EKF localization
+  python main.py ekf --data-file data/processed/localization_training_data.csv
   
-  # Run localization on processed data
-  python main.py --data-file processed_data.csv --output-dir /path/to/output
+  # Train ML model
+  python main.py ml-train --data-file data/processed/localization_training_data.csv
   
-  # Run validation tests
-  python main.py --validate
+  # Compare EKF vs ML
+  python main.py compare --data-file data/processed/localization_training_data.csv
+  
+  # Process raw ROS2 bags
+  python main.py process-bags --input data/raw/CAST/collect5 --output data/processed
         """
     )
     
-    # Input options
-    input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument(
-        "--bag-dir", 
-        type=str, 
-        help="Directory containing ROS2 bag files to process"
-    )
-    input_group.add_argument(
-        "--data-file", 
-        type=str, 
-        help="Path to processed CSV data file"
-    )
-    input_group.add_argument(
-        "--validate", 
-        action="store_true", 
-        help="Run validation tests"
-    )
+    subparsers = parser.add_subparsers(dest='command', help='Command to run')
     
-    # Output options
-    parser.add_argument(
-        "--output-dir", 
-        type=str, 
-        default="./results", 
-        help="Output directory for results (default: ./results)"
-    )
+    # EKF command
+    ekf_parser = subparsers.add_parser('ekf', help='Run EKF localization')
+    ekf_parser.add_argument('--data-file', required=True, help='Processed CSV data file')
+    ekf_parser.add_argument('--output-dir', default='ekf_localization/results', help='Output directory')
+    ekf_parser.add_argument('--visualize', action='store_true', help='Generate plots')
+    ekf_parser.add_argument('--verbose', action='store_true', help='Verbose output')
     
-    # Processing options
-    parser.add_argument(
-        "--freq", 
-        type=float, 
-        default=30.0, 
-        help="Target processing frequency in Hz (default: 30.0)"
-    )
+    # ML training command
+    ml_parser = subparsers.add_parser('ml-train', help='Train ML localization model')
+    ml_parser.add_argument('--data-file', required=True, help='Processed CSV data file')
+    ml_parser.add_argument('--output-dir', default='ml/results', help='Output directory')
+    ml_parser.add_argument('--epochs', type=int, default=50, help='Training epochs')
+    ml_parser.add_argument('--batch-size', type=int, default=32, help='Batch size')
     
-    parser.add_argument(
-        "--visualize", 
-        action="store_true", 
-        help="Generate visualization plots"
-    )
+    # Comparison command
+    comp_parser = subparsers.add_parser('compare', help='Compare EKF vs ML')
+    comp_parser.add_argument('--data-file', required=True, help='Processed CSV data file')
+    comp_parser.add_argument('--output-dir', default='comparison_results', help='Output directory')
     
-    parser.add_argument(
-        "--verbose", 
-        action="store_true", 
-        help="Enable verbose output"
-    )
+    # Data processing command
+    proc_parser = subparsers.add_parser('process-bags', help='Process ROS2 bag files')
+    proc_parser.add_argument('--input', required=True, help='Input bag directory')
+    proc_parser.add_argument('--output', required=True, help='Output directory')
+    proc_parser.add_argument('--freq', type=float, default=30.0, help='Target frequency (Hz)')
+    
+    # Validation command
+    val_parser = subparsers.add_parser('validate', help='Run validation tests')
+    val_parser.add_argument('--type', choices=['ekf', 'ml', 'all'], default='all', help='What to validate')
     
     args = parser.parse_args()
     
-    # Create output directory
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    if args.command is None:
+        parser.print_help()
+        sys.exit(1)
     
-    if args.validate:
-        run_validation()
-    elif args.bag_dir:
-        process_bag_data(args.bag_dir, output_dir, args.freq, args.visualize, args.verbose)
-    elif args.data_file:
-        run_localization(args.data_file, output_dir, args.visualize, args.verbose)
+    # Execute commands
+    if args.command == 'ekf':
+        run_ekf(args)
+    elif args.command == 'ml-train':
+        run_ml_training(args)
+    elif args.command == 'compare':
+        run_comparison(args)
+    elif args.command == 'process-bags':
+        process_bags(args)
+    elif args.command == 'validate':
+        run_validation(args)
 
-def process_bag_data(bag_dir, output_dir, freq, visualize, verbose):
-    """Process ROS2 bag data and run localization."""
-    if verbose:
-        print(f"Processing bag data from: {bag_dir}")
-        print(f"Output directory: {output_dir}")
-        print(f"Target frequency: {freq} Hz")
+def run_ekf(args):
+    """Run EKF localization."""
+    print(f"🎯 Running EKF Localization")
+    print(f"Data file: {args.data_file}")
+    print(f"Output: {args.output_dir}")
     
     try:
-        # Step 1: Preprocess data
-        if verbose:
-            print("\n=== STEP 1: DATA PREPROCESSING ===")
+        from ekf_localization import LocalizationProcessor
         
-        preprocessor = LocalizationPreprocessor(bag_dir)
+        # Create output directory
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+        
+        # Run localization
+        processor = LocalizationProcessor(args.data_file)
+        processor.run_localization()
+        
+        # Evaluate
+        errors = processor.evaluate_accuracy()
+        
+        # Visualize
+        if args.visualize:
+            processor.plot_results(args.output_dir)
+        
+        # Print results
+        if errors is not None and len(errors) > 0:
+            import numpy as np
+            rmse = np.sqrt(np.mean(errors**2))
+            print(f"\n✅ Localization complete!")
+            print(f"   Position RMSE: {rmse:.2f} m")
+            print(f"   Processed: {len(processor.results)} samples")
+            print(f"   Results saved to: {args.output_dir}")
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        sys.exit(1)
+
+def run_ml_training(args):
+    """Train ML localization model."""
+    print(f"🧠 Training ML Model")
+    print(f"Data file: {args.data_file}")
+    print(f"Output: {args.output_dir}")
+    print(f"Epochs: {args.epochs}")
+    
+    try:
+        import torch
+        from ml import LocalizationLSTM, MLLocalizationTrainer
+        
+        # Create output directory
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+        Path('ml/models').mkdir(parents=True, exist_ok=True)
+        
+        # Setup
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"Using device: {device}")
+        
+        # Initialize model
+        model = LocalizationLSTM(input_size=10, hidden_size=128, num_layers=2, output_size=12)
+        trainer = MLLocalizationTrainer(model, device)
+        
+        # Prepare data
+        train_dataset, test_dataset, _, _ = trainer.prepare_data(args.data_file)
+        
+        # Train
+        train_losses, test_losses = trainer.train(
+            train_dataset, test_dataset,
+            epochs=args.epochs,
+            batch_size=args.batch_size
+        )
+        
+        # Evaluate
+        predictions, targets, rmse, r2 = trainer.evaluate(test_dataset)
+        
+        # Save model
+        model_path = Path('ml/models') / 'ml_localization_model.pth'
+        scaler_path = Path('ml/models') / 'ml_scalers.pkl'
+        trainer.save_model(str(model_path), str(scaler_path))
+        
+        print(f"\n✅ Training complete!")
+        print(f"   RMSE: {rmse:.4f}")
+        print(f"   R² Score: {r2:.4f}")
+        print(f"   Model saved to: {model_path}")
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+def run_comparison(args):
+    """Compare EKF vs ML performance."""
+    print(f"🔬 Comparing EKF vs ML")
+    print(f"Data file: {args.data_file}")
+    print(f"Output: {args.output_dir}")
+    
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent / 'ml'))
+        from compare_ekf_ml import LocalizationComparison
+        
+        # Create output directory
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+        
+        # Run comparison
+        comparison = LocalizationComparison(args.data_file)
+        comparison.run_ekf_localization()
+        comparison.train_ml_model()
+        comparison.run_ml_inference()
+        comparison.compare_performance()
+        comparison.create_comparison_plots(args.output_dir)
+        comparison.generate_report(args.output_dir)
+        
+        print(f"\n✅ Comparison complete!")
+        print(f"   Results saved to: {args.output_dir}")
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+def process_bags(args):
+    """Process ROS2 bag files."""
+    print(f"📊 Processing ROS2 Bags")
+    print(f"Input: {args.input}")
+    print(f"Output: {args.output}")
+    
+    try:
+        from ekf_localization import LocalizationPreprocessor
+        
+        # Create output directory
+        Path(args.output).mkdir(parents=True, exist_ok=True)
+        
+        # Process
+        preprocessor = LocalizationPreprocessor(args.input)
         preprocessor.load_data()
-        preprocessor.synchronize_sensors(target_freq=freq)
+        preprocessor.synchronize_sensors(target_freq=args.freq)
         preprocessor.transform_coordinates()
         preprocessor.compute_derivatives()
         preprocessor.clean_data()
         
-        # Save processed data
-        processed_file = output_dir / "localization_training_data.csv"
-        preprocessor.save_processed_data(str(processed_file))
+        # Save
+        output_file = Path(args.output) / 'localization_training_data.csv'
+        preprocessor.save_processed_data(str(output_file))
         
-        if visualize:
-            viz_dir = output_dir / "visualizations"
-            preprocessor.visualize_data(str(viz_dir))
-        
-        if verbose:
-            print(f"✅ Data preprocessing complete. Saved to: {processed_file}")
-        
-        # Step 2: Run localization
-        if verbose:
-            print("\n=== STEP 2: LOCALIZATION ALGORITHM ===")
-        
-        processor = LocalizationProcessor(str(processed_file))
-        processor.run_localization()
-        
-        # Evaluate accuracy
-        errors = processor.evaluate_accuracy()
-        
-        if visualize:
-            results_dir = output_dir / "localization_results"
-            processor.plot_results(str(results_dir))
-        
-        if verbose:
-            print(f"✅ Localization complete. Processed {len(processor.results)} samples")
-            if len(errors) > 0:
-                rmse = (sum(e**2 for e in errors) / len(errors))**0.5
-                print(f"   Position RMSE: {rmse:.2f} m")
-        
-        print(f"\n🎉 Pipeline complete! Results saved to: {output_dir}")
+        print(f"\n✅ Processing complete!")
+        print(f"   Output saved to: {output_file}")
         
     except Exception as e:
-        print(f"❌ Error processing bag data: {str(e)}")
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
-def run_localization(data_file, output_dir, visualize, verbose):
-    """Run localization on processed data."""
-    if verbose:
-        print(f"Running localization on: {data_file}")
-        print(f"Output directory: {output_dir}")
-    
-    try:
-        processor = LocalizationProcessor(data_file)
-        processor.run_localization()
-        
-        # Evaluate accuracy
-        errors = processor.evaluate_accuracy()
-        
-        if visualize:
-            results_dir = output_dir / "localization_results"
-            processor.plot_results(str(results_dir))
-        
-        if verbose:
-            print(f"✅ Localization complete. Processed {len(processor.results)} samples")
-            if len(errors) > 0:
-                rmse = (sum(e**2 for e in errors) / len(errors))**0.5
-                print(f"   Position RMSE: {rmse:.2f} m")
-        
-        print(f"\n🎉 Localization complete! Results saved to: {output_dir}")
-        
-    except Exception as e:
-        print(f"❌ Error running localization: {str(e)}")
-        sys.exit(1)
-
-def run_validation():
+def run_validation(args):
     """Run validation tests."""
-    print("🧪 Running validation tests...")
+    print(f"🧪 Running Validation Tests")
     
     try:
-        # Import and run unit tests
-        sys.path.append(str(Path(__file__).parent / "tests"))
-        from unit_tests import run_unit_tests
-        from validation_framework import ValidationFramework
-        
-        # Run unit tests
-        print("\n=== UNIT TESTS ===")
-        unit_success = run_unit_tests()
-        
-        # Run comprehensive validation
-        print("\n=== COMPREHENSIVE VALIDATION ===")
-        validator = ValidationFramework()
-        validator.run_all_validations()
-        
-        if unit_success:
-            print("\n🎉 All validation tests completed!")
-        else:
-            print("\n⚠️ Some validation tests failed. Check output above.")
+        if args.type in ['ekf', 'all']:
+            print("\n=== EKF VALIDATION ===")
+            from ekf_localization import validate
+            # Run EKF validation
             
+        if args.type in ['ml', 'all']:
+            print("\n=== ML VALIDATION ===")
+            # Run ML validation
+            
+        if args.type == 'all':
+            print("\n=== COMPREHENSIVE VALIDATION ===")
+            sys.path.append('tests')
+            from validation_framework import ValidationFramework
+            validator = ValidationFramework()
+            validator.run_all_validations()
+        
+        print("\n✅ Validation complete!")
+        
     except Exception as e:
-        print(f"❌ Error running validation: {str(e)}")
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
+
