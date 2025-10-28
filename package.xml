@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>polaris_autonomous_system</name>
+  <version>1.0.0</version>
+  <description>Unified autonomous driving system with real-time localization and ML pipeline</description>
+  
+  <maintainer email="valid_monke@tamu.edu">valid_monke</maintainer>
+  <license>Apache License 2.0</license>
+  
+  <url type="website">https://github.com/valid_monke/polaris-autonomous-system</url>
+  <url type="bugtracker">https://github.com/valid_monke/polaris-autonomous-system/issues</url>
+  <url type="repository">https://github.com/valid_monke/polaris-autonomous-system</url>
+
+  <!-- Build dependencies -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <!-- Runtime dependencies -->
+  <depend>rclpy</depend>
+  <depend>rosbag2_py</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>pacmod3_msgs</depend>
+  <depend>python3-numpy</depend>
+  <depend>python3-pandas</depend>
+  <depend>python3-scipy</depend>
+  <depend>python3-matplotlib</depend>
+  <depend>python3-yaml</depend>
+  <depend>python3-psutil</depend>
+
+  <!-- Test dependencies -->
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <!-- Export information -->
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

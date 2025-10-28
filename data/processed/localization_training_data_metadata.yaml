@@ -1,0 +1,25 @@
+duration_seconds: 215.96646070480347
+frequency_hz: !!python/object/apply:numpy.core.multiarray.scalar
+- !!python/object/apply:numpy.dtype
+  args:
+  - f8
+  - false
+  - true
+  state: !!python/tuple
+  - 3
+  - <
+  - null
+  - null
+  - null
+  - -1
+  - -1
+  - 0
+- !!binary |
+  AB4A4AEAPkA=
+sensors:
+  control: accel,steering,brake
+  gps: latitude,longitude,altitude
+  imu: ang_vel_x,ang_vel_y,ang_vel_z,lin_acc_x,lin_acc_y,lin_acc_z
+  pose: pose_x,pose_y,pose_z,pose_qx,pose_qy,pose_qz,pose_qw
+  speed: speed
+total_samples: 6480

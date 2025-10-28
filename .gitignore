@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ROS2
+install/
+build/
+log/
+*.db3
+*.db3-shm
+*.db3-wal
+
+# Data files (too large for git)
+data/raw/*.bag
+data/raw/**/*.db3
+data/processed/*.csv
+*.bag
+*.mcap
+
+# Results and outputs (generated)
+results/
+visualizations/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+
+# Keep example results in docs
+!docs/images/*.png
+!docs/images/*.jpg
+!docs/examples/*.png
+
+# Model files (too large)
+*.pth
+*.pkl
+*.h5
+*.onnx
+models/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+*.cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Configuration (keep templates, ignore local configs)
+config/local_*.yaml
+config/*_local.yaml
+
+# Validation reports (generated)
+config/validation_report.yaml
+
